@@ -1,6 +1,7 @@
 class LAMMPSThermoData:
   def __init__(self, thermolines, timing_data=None):
     import numpy as np
+    from scipy.stats import sem
 
     self.names = thermolines.pop(0).split()
     self.values = np.fromstring("".join(thermolines), sep="\n")
@@ -10,6 +11,10 @@ class LAMMPSThermoData:
 
     if timing_data:
       self.time, self.procs, self.steps, self.atoms = list(map(float, timing_data))
+
+    self.mean = np.mean(self.values, axis=0)
+    self.stddev = np.std(self.values, axis=0)
+    self.stderr = sem(self.values, axis=0)
 
   def timing_string(self):
     if self.time:
@@ -73,25 +78,44 @@ if __name__ == "__main__":
       help="Pattern for the output filenames. {i} represents the block number.")
   parser.add_argument("--onlyfields", type=str, nargs="*", help="Include only "
       "the given fields in the output files.")
+  parser.add_argument("--quietstats", action="store_true", help="Do not print "
+      "averages to the screen.")
   args = parser.parse_args()
 
   l = LAMMPSLogFile(args.filename)
   l.parse()
 
+  no_stats = ["Time", "Step"]
+
   for i,b in enumerate(l.loop_blocks()):
     n = b.names
     filename = args.filepattern.format(i=i)
+    statsline = "{:^20} {:^20} {:^20} {:^20}\n".format("Quantity", "Mean", "Std Dev", "Std Err")
+    statsline += "-"*83+"\n"
     if args.onlyfields:
       columns = [i for i,name in enumerate(n) if name in args.onlyfields]
       if len(columns) == 0:
         continue
       else:
+        for c in columns:
+          if n[c] in no_stats:
+            continue
+          statsline += "{:^20} {:^20} {:^20} {:^20}\n".format(n[c], b.mean[c], b.stddev[c], b.stderr[c])
+        column_list = " ".join(args.onlyfields)
         v = b.values[:, columns]
-        headerline = " ".join(args.onlyfields)
-        #include the timing data at the end, but not the final newline
-        np.savetxt(filename, v, header=headerline, footer=b.timing_string()[:-1])
     else:
+      for c, name in enumerate(n):
+        if name in no_stats:
+          continue
+        statsline += "{:^20} {:^20} {:^20} {:^20}\n".format(name, b.mean[c], b.stddev[c], b.stderr[c])
       v = b.values
-      headerline = " ".join(n)
-      #include the timing data at the end, but not the final newline
-      np.savetxt(filename, v, header=headerline, footer=b.timing_string()[:-1])
+      column_list = " ".join(n)
+
+    headerline = "{:^80}\n{:^80}\n\n".format("Columns in file:", column_list)
+    headerline += "{:^80}\n{}\n".format("Statistics", "-"*83)
+    headerline += statsline
+    headerline += "-"*83+"\n\n"
+    headerline += "{:^80}\n{}\n{}\n{}\n\n".format("Timing Information", "-"*83, b.timing_string()[:-1], "-"*83)
+    headerline += column_list
+    np.savetxt(filename, v, header=headerline)
+
