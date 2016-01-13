@@ -17,7 +17,7 @@ class LAMMPSThermoData:
     self.stderr = sem(self.values, axis=0)
 
   def timing_string(self):
-    if self.time:
+    if hasattr(self, "time"):
       output = "{steps} steps in {time} seconds.\n".format(
           steps=int(self.steps), time=self.time)
       output += "{s_per_step:e} seconds per step (~{steps_per_day:.2e} steps per day)\n".format(
@@ -30,7 +30,7 @@ class LAMMPSLogFile:
   #these are the start and end points of the thermodynamic data block in the log
   thermo_block_begin = "Memory usage per processor"
   thermo_block_end = "Loop time"
-  timing_regex = "Loop time of ([0-9.]+) on ([0-9]+) procs \(.+\) for ([0-9]+) steps with ([0-9]+) atoms"
+  timing_regex = "Loop time of ([0-9.]+) on ([0-9]+) procs(?:\(.+\))? for ([0-9]+) steps with ([0-9]+) atoms"
 
   thermodata_blocks = []
 
