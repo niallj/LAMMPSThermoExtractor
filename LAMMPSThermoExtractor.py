@@ -1,4 +1,5 @@
 class LAMMPSThermoData:
+  time = None
   def __init__(self, thermolines, timing_data=None):
     import numpy as np
     from scipy.stats import sem
@@ -30,7 +31,7 @@ class LAMMPSLogFile:
   #these are the start and end points of the thermodynamic data block in the log
   thermo_block_begin = "Memory usage per processor"
   thermo_block_end = "Loop time"
-  timing_regex = "Loop time of ([0-9.]+) on ([0-9]+) procs(?:\(.+\))? for ([0-9]+) steps with ([0-9]+) atoms"
+  timing_regex = "Loop time of ([0-9.]+) on ([0-9]+) procs(?: \(.+\))? for ([0-9]+) steps with ([0-9]+) atoms"
 
   thermodata_blocks = []
 
@@ -78,8 +79,6 @@ if __name__ == "__main__":
       help="Pattern for the output filenames. {i} represents the block number.")
   parser.add_argument("--onlyfields", type=str, nargs="*", help="Include only "
       "the given fields in the output files.")
-  parser.add_argument("--quietstats", action="store_true", help="Do not print "
-      "averages to the screen.")
   args = parser.parse_args()
 
   l = LAMMPSLogFile(args.filename)
